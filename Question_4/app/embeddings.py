@@ -1,6 +1,6 @@
 import os
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from typing import Optional
 
 class EmbeddingsManager:
@@ -12,27 +12,21 @@ class EmbeddingsManager:
         self._initialize_embeddings()
     
     def _initialize_embeddings(self):
-        """Initialize OpenAI embeddings with fallback mode"""
+        """Initialize HuggingFace embeddings (local/free)"""
         try:
-            # Check for API key
-            if not os.getenv("OPENAI_API_KEY"):
-                print("Warning: OPENAI_API_KEY environment variable not set")
-                self.fallback_mode = True
-                return
+            print("🔄 Initializing local HuggingFace embeddings...")
             
-            # Try to initialize embeddings - if it fails, use fallback mode
-            try:
-                self.embeddings = OpenAIEmbeddings(
-                    model="text-embedding-ada-002"
-                )
-                print("✅ OpenAI embeddings initialized successfully")
-            except Exception as embed_error:
-                print(f"Warning: OpenAI embeddings failed: {embed_error}")
-                print("🔄 Falling back to mock mode for demo purposes")
-                self.fallback_mode = True
-                
+            # Initialize HuggingFace embeddings with all-MiniLM-L6-v2 model
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name="all-MiniLM-L6-v2",
+                model_kwargs={'device': 'cpu'},  # Use CPU for broader compatibility
+                encode_kwargs={'normalize_embeddings': True}  # Normalize for better similarity search
+            )
+            print("✅ Local HuggingFace embeddings initialized successfully")
+            print("✅ Using model: all-MiniLM-L6-v2 (free/local)")
+            
         except Exception as e:
-            print(f"Warning: Could not initialize OpenAI embeddings: {e}")
+            print(f"❌ Error initializing HuggingFace embeddings: {e}")
             print("🔄 Enabling fallback mode")
             self.fallback_mode = True
     
@@ -53,6 +47,7 @@ class EmbeddingsManager:
                     self.embeddings,
                     allow_dangerous_deserialization=True
                 )
+                print(f"✅ Vector store loaded from {self.index_path}")
                 return self.vector_store
             else:
                 print(f"Vector store not found at {self.index_path}")

@@ -13,21 +13,15 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from langchain_community.document_loaders import WebBaseLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
 
 def ingest_drinkware_products():
     """Crawl ZUS drinkware pages and create vector store"""
     
-    # Check for OpenAI API key
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Please set your OpenAI API key:")
-        print("export OPENAI_API_KEY='your-api-key-here'")
-        return False
-    
     try:
         print("Loading ZUS drinkware pages...")
+        print("🔄 Using local HuggingFace embeddings (free/no API key required)")
         
         # URLs to crawl (drinkware collection)
         urls = [
@@ -55,10 +49,12 @@ def ingest_drinkware_products():
         
         print(f"Split into {len(chunks)} chunks")
         
-        # Create embeddings and vector store
-        print("Creating embeddings and vector store...")
-        embeddings = OpenAIEmbeddings(
-            model="text-embedding-ada-002"
+        # Create embeddings and vector store using HuggingFace
+        print("Creating embeddings and vector store with local model...")
+        embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={'device': 'cpu'},  # Use CPU for broader compatibility
+            encode_kwargs={'normalize_embeddings': True}  # Normalize for better similarity search
         )
         vector_store = FAISS.from_documents(chunks, embeddings)
         
@@ -68,6 +64,7 @@ def ingest_drinkware_products():
         
         print(f"✅ Vector store saved to {index_path}")
         print(f"✅ Ingestion complete! {len(chunks)} chunks indexed.")
+        print("✅ Using all-MiniLM-L6-v2 model (completely local/free)")
         
         return True
         
@@ -78,8 +75,10 @@ def ingest_drinkware_products():
 def test_vector_store():
     """Test the created vector store"""
     try:
-        embeddings = OpenAIEmbeddings(
-            model="text-embedding-ada-002"
+        embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
         )
         vector_store = FAISS.load_local(
             "faiss_drinkware_index", 
@@ -103,6 +102,7 @@ def test_vector_store():
 if __name__ == "__main__":
     print("ZUS Coffee Drinkware Ingestion")
     print("=" * 40)
+    print("🆓 Using FREE local embeddings (no OpenAI API key required)")
     
     success = ingest_drinkware_products()
     

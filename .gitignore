@@ -147,6 +147,10 @@ logs/
 # Node modules (if any)
 node_modules/
 
+# FAISS vector store files
+*.faiss
+*.pkl
+
 # Temporary files
 tmp/
 temp/
