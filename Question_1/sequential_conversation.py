@@ -104,7 +104,7 @@ class EntityExtractor:
     def __init__(self):
         # compile regex patterns once for efficiency
         raw_location_patterns = {
-            "petaling_jaya": r"(petaling\s+jaya|pj|ss\s*\d+)",
+            "petaling_jaya": r"(petaling\s+jaya|pj(?!\s*central)|ss\s*2(?!\d))",
             "kuala_lumpur": r"(kuala\s+lumpur|kl|klcc)",
             "ss2": r"ss\s*2",
             "pj_central": r"pj\s+central",
@@ -179,6 +179,9 @@ class SequentialConversationBot:
                 self.memory.set_state(ConversationState.OUTLET_SELECTION)
                 region = locs[-1]
                 self.memory.update_context("inquiry_location", region)
+                # Clear selected outlet when switching locations to prevent inconsistent state
+                if "selected_outlet" in self.memory.context_variables:
+                    del self.memory.context_variables["selected_outlet"]
                 outlet_names = [o.name for o in self.memory.outlets_db[region]]
                 return (f"Switching to {region.replace('_',' ').title()}. "
                         f"Which outlet are you referring to? We have: {', '.join(outlet_names)}")
