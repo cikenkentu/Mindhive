@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from app.products import router as products_router
 from app.outlets import router as outlets_router
+import os
+import subprocess
+import sys
 
 app = FastAPI(
     title="ZUS Coffee API",
@@ -10,6 +13,29 @@ app = FastAPI(
 
 app.include_router(products_router)
 app.include_router(outlets_router)
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and vector store on app startup"""
+    try:
+        print("🚀 Initializing ZUS Coffee API...")
+        
+        # Check if already initialized
+        if not (os.path.exists("zus_outlets.db") and os.path.exists("faiss_drinkware_index")):
+            print("Running startup initialization...")
+            # Run startup script
+            result = subprocess.run([sys.executable, "startup.py"], 
+                                  capture_output=True, text=True, cwd=os.getcwd())
+            if result.returncode == 0:
+                print("✅ Startup initialization completed successfully")
+            else:
+                print(f"⚠️ Startup initialization warning: {result.stderr}")
+        else:
+            print("✅ Already initialized - skipping startup")
+            
+    except Exception as e:
+        print(f"⚠️ Startup initialization error: {e}")
+        print("🔄 API will continue with fallback mode")
 
 @app.get("/")
 def root():
