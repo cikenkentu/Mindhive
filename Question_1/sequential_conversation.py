@@ -49,6 +49,10 @@ class ConversationMemory:
         """
         add new conversation turn
         """
+        # Recover if current_state got corrupted externally
+        if not isinstance(self.current_state, ConversationState):
+            self.current_state = ConversationState.INITIAL
+
         if extracted_entities is None:
             extracted_entities = {}
             
@@ -231,7 +235,7 @@ class SequentialConversationBot:
         if "outlet_inquiry" in entities["intents"]:
             if "petaling_jaya" in entities["locations"]:
                 self.memory.update_context("inquiry_location", "petaling_jaya")
-                outlets = self.memory.outlets_db["petaling_jaya"]
+                outlets = self.memory.outlets_db.get("petaling_jaya", [])
                 
                 if len(outlets) > 1:
                     self.memory.set_state(ConversationState.OUTLET_SELECTION)
@@ -278,7 +282,7 @@ class SequentialConversationBot:
             self.memory.update_context("inquiry_location", location)
             
             if location in self.memory.outlets_db:
-                outlets = self.memory.outlets_db[location]
+                outlets = self.memory.outlets_db.get(location, [])
                 if len(outlets) > 1:
                     self.memory.set_state(ConversationState.OUTLET_SELECTION)
                     outlet_names = [outlet.name for outlet in outlets]
@@ -298,7 +302,7 @@ class SequentialConversationBot:
         """
         inquiry_location = self.memory.get_context("inquiry_location")
         if inquiry_location and inquiry_location in self.memory.outlets_db:
-            outlets = self.memory.outlets_db[inquiry_location]
+            outlets = self.memory.outlets_db.get(inquiry_location, [])
             selected_outlet = None
             
             user_lower = user_input.lower().strip()
@@ -336,7 +340,7 @@ class SequentialConversationBot:
         
         # provide helpful suggestions for unmatched outlets
         if inquiry_location and inquiry_location in self.memory.outlets_db:
-            outlets = self.memory.outlets_db[inquiry_location]
+            outlets = self.memory.outlets_db.get(inquiry_location, [])
             outlet_names = [outlet.name for outlet in outlets]
             location_name = inquiry_location.replace('_', ' ').title()
             return f"We don't have that outlet in {location_name}. Our {location_name} outlets are: {', '.join(outlet_names)}."

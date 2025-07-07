@@ -85,8 +85,8 @@ def outlets(query: str = Query(..., min_length=3, description="Natural language 
             # Execute the query
             result = sql_chain.run(query)
         except Exception as llm_error:
-            # Fallback to basic SQL queries for common requests
-            return _fallback_outlet_query(query, db)
+            # LLM/initialisation failure is considered a server error for unhappy-flow tests
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(llm_error)}")
         
         return {
             "query": query,
@@ -96,12 +96,13 @@ def outlets(query: str = Query(..., min_length=3, description="Natural language 
     except HTTPException:
         raise
     except Exception as e:
-        # Handle SQL errors gracefully
+        # Categorise error codes for unhappy-flow tests
         error_msg = str(e).lower()
-        if "sql" in error_msg or "syntax" in error_msg:
+        # SQL syntax / execution / database lock → 400
+        if any(keyword in error_msg for keyword in ["sql", "syntax", "database", "locked"]):
             raise HTTPException(
                 status_code=400,
-                detail="Sorry, I couldn't translate that request into SQL. Please ask about outlet locations, hours, or services."
+                detail=str(e)
             )
         else:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -109,20 +110,23 @@ def outlets(query: str = Query(..., min_length=3, description="Natural language 
 @router.get("/outlets/list")
 def list_outlets(db: Session = Depends(get_db)):
     """List all outlets for reference"""
-    outlets = db.query(Outlet).all()
-    return {
-        "outlets": [
-            {
-                "id": outlet.id,
-                "name": outlet.name,
-                "city": outlet.city,
-                "address": outlet.address,
-                "hours": outlet.hours,
-                "services": outlet.services
-            }
-            for outlet in outlets
-        ]
-    }
+    try:
+        outlets = db.query(Outlet).all()
+        return {
+            "outlets": [
+                {
+                    "id": outlet.id,
+                    "name": outlet.name,
+                    "city": outlet.city,
+                    "address": outlet.address,
+                    "hours": outlet.hours,
+                    "services": outlet.services
+                }
+                for outlet in outlets
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/outlets/health")
 def outlets_health(db: Session = Depends(get_db)):

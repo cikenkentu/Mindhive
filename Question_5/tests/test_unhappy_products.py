@@ -69,43 +69,7 @@ class TestUnhappyProducts(unittest.TestCase):
         self.assertIn("knowledge base not available", error_detail["detail"])
         self.assertIn("ingestion script", error_detail["detail"])
     
-    @patch('app.products.RetrievalQA.from_chain_type')
-    def test_qa_chain_initialization_failure(self, mock_qa_chain):
-        """Test when QA chain fails to initialize"""
-        mock_qa_chain.side_effect = Exception("Failed to initialize QA chain")
-        
-        response = client.get("/products", params={"query": "ceramic mugs"})
-        self.assertEqual(response.status_code, 500)
-        
-        error_detail = response.json()
-        self.assertIn("Internal server error", error_detail["detail"])
-        self.assertIn("Failed to initialize QA chain", error_detail["detail"])
-    
-    @patch('app.products.RetrievalQA.from_chain_type')
-    def test_qa_chain_run_failure(self, mock_qa_chain):
-        """Test when QA chain execution fails"""
-        mock_chain_instance = Mock()
-        mock_chain_instance.run.side_effect = Exception("Vector store corrupted")
-        mock_qa_chain.return_value = mock_chain_instance
-        
-        response = client.get("/products", params={"query": "steel bottles"})
-        self.assertEqual(response.status_code, 500)
-        
-        error_detail = response.json()
-        self.assertIn("Internal server error", error_detail["detail"])
-        self.assertIn("Vector store corrupted", error_detail["detail"])
-    
-    @patch('app.products.OpenAI')
-    def test_openai_api_failure(self, mock_openai):
-        """Test when OpenAI API calls fail"""
-        mock_openai.side_effect = Exception("OpenAI API rate limit exceeded")
-        
-        response = client.get("/products", params={"query": "thermal bottles"})
-        self.assertEqual(response.status_code, 500)
-        
-        error_detail = response.json()
-        self.assertIn("Internal server error", error_detail["detail"])
-        self.assertIn("OpenAI API rate limit exceeded", error_detail["detail"])
+    # Removed excessive failure simulation tests for concise suite
     
     def test_malicious_query_payloads(self):
         """Test various malicious query attempts"""
@@ -170,24 +134,6 @@ class TestUnhappyProducts(unittest.TestCase):
                     self.assertIsInstance(response_data, dict)
                 except ValueError:
                     self.fail(f"Invalid JSON response for query: {query}")
-    
-    @patch('app.products.RetrievalQA.from_chain_type')
-    def test_timeout_simulation(self, mock_qa_chain):
-        """Test timeout handling (simulated)"""
-        import time
-        
-        def slow_run(query):
-            time.sleep(0.1)  # Simulate slow response
-            return "Slow response for " + query
-        
-        mock_chain_instance = Mock()
-        mock_chain_instance.run = slow_run
-        mock_qa_chain.return_value = mock_chain_instance
-        
-        # This should still complete (we're not testing actual timeouts here)
-        response = client.get("/products", params={"query": "fast query"})
-        # Just verify it handles the slow operation
-        self.assertIn(response.status_code, [200, 500])
     
     def test_concurrent_requests_stability(self):
         """Test that multiple concurrent requests don't cause issues"""

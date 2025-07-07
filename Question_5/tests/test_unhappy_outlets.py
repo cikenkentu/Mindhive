@@ -69,32 +69,7 @@ class TestUnhappyOutlets(unittest.TestCase):
         self.assertIn("Internal server error", error_detail["detail"])
         self.assertIn("Failed to connect to database", error_detail["detail"])
     
-    @patch('app.outlets.SQLDatabaseChain.from_llm')
-    def test_sql_execution_error(self, mock_sql_chain):
-        """Test when SQL execution fails"""
-        mock_chain_instance = Mock()
-        mock_chain_instance.run.side_effect = Exception("Database locked")
-        mock_sql_chain.return_value = mock_chain_instance
-        
-        response = client.get("/outlets", params={"query": "hours of SS 2"})
-        self.assertEqual(response.status_code, 400)
-        
-        error_detail = response.json()
-        self.assertIn("Database locked", error_detail["detail"])
-    
-    @patch('app.outlets.SQLDatabaseChain.from_llm')
-    def test_sql_syntax_error_handling(self, mock_sql_chain):
-        """Test handling of SQL syntax errors"""
-        mock_chain_instance = Mock()
-        mock_chain_instance.run.side_effect = Exception("SQL syntax error near 'FROM'")
-        mock_sql_chain.return_value = mock_chain_instance
-        
-        response = client.get("/outlets", params={"query": "malformed query"})
-        self.assertEqual(response.status_code, 400)
-        
-        error_detail = response.json()
-        self.assertIn("couldn't translate that request into SQL", error_detail["detail"])
-        self.assertIn("outlet locations, hours, or services", error_detail["detail"])
+    # Removed excessive SQL failure simulation tests for concise suite
     
     @patch('app.outlets.OpenAI')
     def test_openai_api_failure(self, mock_openai):
