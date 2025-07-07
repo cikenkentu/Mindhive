@@ -1,7 +1,104 @@
 import os
-from langchain_community.vectorstores import FAISS
+import pickle
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 from langchain_huggingface import HuggingFaceEmbeddings
-from typing import Optional
+from typing import Optional, List, Dict, Any
+
+class LightweightVectorStore:
+    """Lightweight vector store replacement for FAISS using scikit-learn"""
+    
+    def __init__(self, embeddings_function, persist_directory: str):
+        self.embeddings_function = embeddings_function
+        self.persist_directory = persist_directory
+        self.vectors = []
+        self.texts = []
+        self.metadatas = []
+    
+    @classmethod
+    def from_documents(cls, documents, embeddings_function):
+        """Create vector store from documents"""
+        store = cls(embeddings_function, "faiss_drinkware_index")
+        
+        # Extract texts and metadata
+        texts = [doc.page_content for doc in documents]
+        metadatas = [doc.metadata for doc in documents]
+        
+        # Generate embeddings
+        vectors = embeddings_function.embed_documents(texts)
+        
+        store.vectors = np.array(vectors)
+        store.texts = texts
+        store.metadatas = metadatas
+        
+        return store
+    
+    def save_local(self, path: str):
+        """Save vector store to disk"""
+        os.makedirs(path, exist_ok=True)
+        
+        # Save vectors and metadata
+        with open(os.path.join(path, "vectors.pkl"), "wb") as f:
+            pickle.dump({
+                "vectors": self.vectors,
+                "texts": self.texts,
+                "metadatas": self.metadatas
+            }, f)
+    
+    @classmethod
+    def load_local(cls, path: str, embeddings_function, allow_dangerous_deserialization=True):
+        """Load vector store from disk"""
+        store = cls(embeddings_function, path)
+        
+        with open(os.path.join(path, "vectors.pkl"), "rb") as f:
+            data = pickle.load(f)
+            store.vectors = data["vectors"]
+            store.texts = data["texts"]
+            store.metadatas = data["metadatas"]
+        
+        return store
+    
+    def similarity_search(self, query: str, k: int = 3):
+        """Perform similarity search"""
+        if len(self.vectors) == 0:
+            return []
+        
+        # Get query embedding
+        query_vector = self.embeddings_function.embed_query(query)
+        query_vector = np.array(query_vector).reshape(1, -1)
+        
+        # Calculate similarities
+        similarities = cosine_similarity(query_vector, self.vectors)[0]
+        
+        # Get top k indices
+        top_indices = np.argsort(similarities)[::-1][:k]
+        
+        # Return results
+        results = []
+        for idx in top_indices:
+            # Create document-like object
+            doc = type('Document', (), {
+                'page_content': self.texts[idx],
+                'metadata': self.metadatas[idx]
+            })()
+            results.append(doc)
+        
+        return results
+    
+    def as_retriever(self, search_kwargs: Dict[str, Any] = None):
+        """Return a retriever interface"""
+        if search_kwargs is None:
+            search_kwargs = {"k": 3}
+        
+        class Retriever:
+            def __init__(self, vector_store, search_kwargs):
+                self.vector_store = vector_store
+                self.search_kwargs = search_kwargs
+            
+            def get_relevant_documents(self, query: str):
+                return self.vector_store.similarity_search(query, **self.search_kwargs)
+        
+        return Retriever(self, search_kwargs)
 
 class EmbeddingsManager:
     def __init__(self, index_path: str = "faiss_drinkware_index"):
@@ -30,8 +127,8 @@ class EmbeddingsManager:
             print("🔄 Enabling fallback mode")
             self.fallback_mode = True
     
-    def load_vector_store(self) -> Optional[FAISS]:
-        """Load FAISS vector store from disk with fallback"""
+    def load_vector_store(self) -> Optional[LightweightVectorStore]:
+        """Load vector store from disk with fallback"""
         if self.fallback_mode:
             print("Running in fallback mode - vector store not available")
             return None
@@ -42,7 +139,7 @@ class EmbeddingsManager:
                 return None
                 
             if os.path.exists(self.index_path):
-                self.vector_store = FAISS.load_local(
+                self.vector_store = LightweightVectorStore.load_local(
                     self.index_path, 
                     self.embeddings,
                     allow_dangerous_deserialization=True

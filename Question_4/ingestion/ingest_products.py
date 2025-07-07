@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Product ingestion script for ZUS Coffee drinkware.
-Crawls product pages and creates FAISS vector store.
+Crawls product pages and creates vector store.
 """
 
 import os
@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from langchain_community.document_loaders import WebBaseLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import FAISS
+from app.embeddings import LightweightVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 
 def ingest_drinkware_products():
@@ -22,6 +22,7 @@ def ingest_drinkware_products():
     try:
         print("Loading ZUS drinkware pages...")
         print("🔄 Using local HuggingFace embeddings (free/no API key required)")
+        print("📦 Using lightweight vector store (deployment-friendly)")
         
         # URLs to crawl (drinkware collection)
         urls = [
@@ -56,7 +57,7 @@ def ingest_drinkware_products():
             model_kwargs={'device': 'cpu'},  # Use CPU for broader compatibility
             encode_kwargs={'normalize_embeddings': True}  # Normalize for better similarity search
         )
-        vector_store = FAISS.from_documents(chunks, embeddings)
+        vector_store = LightweightVectorStore.from_documents(chunks, embeddings)
         
         # Save to disk
         index_path = "faiss_drinkware_index"
@@ -80,7 +81,7 @@ def test_vector_store():
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
-        vector_store = FAISS.load_local(
+        vector_store = LightweightVectorStore.load_local(
             "faiss_drinkware_index", 
             embeddings,
             allow_dangerous_deserialization=True
@@ -103,6 +104,7 @@ if __name__ == "__main__":
     print("ZUS Coffee Drinkware Ingestion")
     print("=" * 40)
     print("🆓 Using FREE local embeddings (no OpenAI API key required)")
+    print("🚀 Using deployment-friendly vector store")
     
     success = ingest_drinkware_products()
     
