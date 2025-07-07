@@ -294,6 +294,15 @@ class CalculatorBot:
             "calculator_available": self.calculator_available,
             "calculation_history": self.memory.calculation_history,
             "context": self.memory.get_context(),
+            # expose raw turns list for deep inspection in unhappy-flow tests
+            "turns": [
+                {
+                    "user_input": t.user_input,
+                    "bot_response": t.bot_response,
+                    "action_taken": t.action_taken,
+                    "timestamp": t.timestamp.isoformat()
+                } for t in self.memory.turns
+            ],
             "conversation_history": self.memory.get_conversation_history()
         }
     

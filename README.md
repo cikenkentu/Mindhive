@@ -36,7 +36,7 @@ python -m pytest test_planner.py -v
 ```bash
 cd Question_3
 # Terminal 1: Start calculator server
-python server.py
+python server.py / uvicorn server:app --reload 
 
 # Terminal 2: Run bot
 python agentic_bot.py
@@ -53,8 +53,8 @@ python ingestion/ingest_outlets.py
 # Start API server
 uvicorn app.main:app --reload
 
-# Test integration
-python chatbot_integration.py
+# Test endpoints
+python test_endpoints.py
 ```
 
 **Part 5: Unhappy Flows**

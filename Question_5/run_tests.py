@@ -53,8 +53,8 @@ def run_test_suite():
     
     # Custom test result class for detailed reporting
     class DetailedTestResult(unittest.TextTestResult):
-        def __init__(self, stream, verbosity):
-            super().__init__(stream, verbosity)
+        def __init__(self, stream, descriptions, verbosity):
+            super().__init__(stream, descriptions, verbosity)
             self.test_results = []
         
         def startTest(self, test):

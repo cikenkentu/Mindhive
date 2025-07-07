@@ -39,6 +39,11 @@ def calc_api(expr: str) -> float:
         # Take the first complete match
         math_expr = matches[0][0] if matches[0][0] else matches[0][1]
         math_expr = math_expr.strip()
+        # Reject if the original input contains extra characters beyond the math expr
+        # (e.g. "1+1; import os")
+        cleaned_original = expr.strip()
+        if cleaned_original != math_expr:
+            raise ValueError("Invalid characters in expression")
     else:
         # Try to extract a simple pattern
         simple_pattern = r'\d+(?:\.\d+)?\s*[\+\-\*\/]\s*\d+(?:\.\d+)?'
