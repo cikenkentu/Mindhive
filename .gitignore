@@ -138,6 +138,10 @@ logs/
 *.db
 *.sqlite3
 
+# FAISS vector store files
+*.faiss
+*.pkl
+
 # API Keys and Environment Variables
 .env.local
 .env.development.local
@@ -146,10 +150,6 @@ logs/
 
 # Node modules (if any)
 node_modules/
-
-# FAISS vector store files
-*.faiss
-*.pkl
 
 # Temporary files
 tmp/
