@@ -1,0 +1,8 @@
+{
+  "name": "zus-coffee-api",
+  "version": "1.0.0",
+  "description": "ZUS Coffee API with RAG and Text2SQL",
+  "scripts": {
+    "start": "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+  }
+} 
