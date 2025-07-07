@@ -1,0 +1,3 @@
+# nixpacks.toml
+[phases.setup]
+packages = ["swig", "gcc", "gfortran", "make"]
