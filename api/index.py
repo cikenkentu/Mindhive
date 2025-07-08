@@ -39,11 +39,13 @@ try:
 except ImportError as e:
     raise ImportError(f"Failed to import calc_api from Question_3.server: {e}")
 
+# ---------------------------------------------------------------------------
+# Products router (may fail due to heavy deps)
+# ---------------------------------------------------------------------------
+
 try:
-    # Q4 – existing FastAPI routers (products & outlets)
     from app.products import router as products_router  # type: ignore
-    from app.outlets import router as outlets_router  # type: ignore
-except ImportError as e:
+except Exception as e:  # catch ANY exception
     # Heavy ML deps (scikit-learn, transformers) not installed in lightweight
     # deployment. Provide a disabled stub so routes still exist.
     print(f"[WARN] Products router unavailable ({e}). Using lightweight stub.")
@@ -63,6 +65,59 @@ except ImportError as e:
             "openai_api_available": False,
             "status": "disabled"
         }
+
+# ---------------------------------------------------------------------------
+# Outlets router (may fail if OpenAI import incompatible)
+# ---------------------------------------------------------------------------
+
+try:
+    from app.outlets import router as outlets_router  # type: ignore
+except Exception as e:  # catch ANY exception
+    print(f"[WARN] Outlets router unavailable ({e}). Using lightweight stub.")
+
+    from sqlalchemy.orm import Session
+    from fastapi import Depends, Query as FQuery
+    from app.db import get_db, create_tables  # ensure tables
+    from app.models import Outlet
+
+    create_tables()
+
+    outlets_router = APIRouter()
+
+    @outlets_router.get("/outlets", tags=["Outlets (stub)"])
+    def outlets_stub(query: str = FQuery(..., min_length=3), db: Session = Depends(get_db)):
+        q = query.lower()
+        # Very naive parsing
+        if any(city in q for city in ["petaling jaya", "pj"]):
+            outlets = db.query(Outlet).filter(Outlet.city.contains("Petaling Jaya")).all()
+        elif any(city in q for city in ["kuala lumpur", "kl"]):
+            outlets = db.query(Outlet).filter(Outlet.city.contains("Kuala Lumpur")).all()
+        else:
+            outlets = db.query(Outlet).all()
+
+        if not outlets:
+            return {"query": query, "result": "No outlets match your criteria.", "status": "ok"}
+
+        outlet_info = [f"• {o.name} ({o.city}) - {o.hours}" for o in outlets]
+        return {
+            "query": query,
+            "result": f"Found {len(outlets)} outlet(s):\n" + "\n".join(outlet_info),
+            "status": "stub"
+        }
+
+    @outlets_router.get("/outlets/list", tags=["Outlets (stub)"])
+    def list_outlets_stub(db: Session = Depends(get_db)):
+        outlets = db.query(Outlet).all()
+        return {"outlets": [
+            {"id": o.id, "name": o.name, "city": o.city, "address": o.address, "hours": o.hours, "services": o.services}
+            for o in outlets
+        ]}
+
+    @outlets_router.get("/outlets/health", tags=["Outlets (stub)"])
+    def outlets_health_stub(db: Session = Depends(get_db)):
+        count = db.query(Outlet).count()
+        return {"database_connected": True, "outlet_count": count, "status": "healthy"}
+
 
 # ---------------------------------------------------------------------------
 # FastAPI application
