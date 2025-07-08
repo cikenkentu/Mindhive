@@ -156,6 +156,10 @@ class SequentialConversationBot:
     def __init__(self):
         self.memory = ConversationMemory()
         self.extractor = EntityExtractor()
+        # mapping for location aliases to canonical region keys
+        self._location_aliases = {
+            "pj_central": "petaling_jaya",
+        }
     
     def process_input(self, user_input):
         """
@@ -164,8 +168,16 @@ class SequentialConversationBot:
         # handle empty input
         if not user_input or not user_input.strip():
             return "I didn't catch that—could you re-type your question?"
-        
+
         entities = self.extractor.extract(user_input)
+        # --- normalize location aliases to canonical keys (bug fix for PJ Central) ---
+        if entities["locations"]:
+            normalized_locations = []
+            for loc in entities["locations"]:
+                normalized_locations.append(self._location_aliases.get(loc, loc))
+            # deduplicate while preserving order
+            entities["locations"] = list(dict.fromkeys(normalized_locations))
+        # -------------------------------------------------------------------------
         response = self._generate_response(user_input, entities)
         self.memory.add_turn(user_input, response, entities)
         
