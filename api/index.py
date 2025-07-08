@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Body, BackgroundTasks, APIRouter
 from typing import Dict, Any
 import pathlib
 import sys
@@ -44,7 +44,25 @@ try:
     from app.products import router as products_router  # type: ignore
     from app.outlets import router as outlets_router  # type: ignore
 except ImportError as e:
-    raise ImportError(f"Failed to import Q4 routers: {e}")
+    # Heavy ML deps (scikit-learn, transformers) not installed in lightweight
+    # deployment. Provide a disabled stub so routes still exist.
+    print(f"[WARN] Products router unavailable ({e}). Using lightweight stub.")
+    products_router = APIRouter()
+
+    @products_router.get("/products", tags=["Products RAG"])
+    def products_disabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Products endpoint disabled in lightweight deployment."
+        )
+
+    @products_router.get("/products/health")
+    def products_health_disabled():
+        return {
+            "vector_store_loaded": False,
+            "openai_api_available": False,
+            "status": "disabled"
+        }
 
 # ---------------------------------------------------------------------------
 # FastAPI application
