@@ -162,6 +162,8 @@ async def init_resources():
 
     try:
         # Always ensure tables exist
+        import os
+        os.environ.setdefault("SQLITE_PATH", "/tmp/zus_outlets.db")
         create_tables()
 
         # Check if outlets table has rows; if empty, populate
